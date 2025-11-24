@@ -1,6 +1,6 @@
 import asyncio
 from perplexity_async import Client
-from config.cookies.perplexity_cookies import perplexity_cookies
+from config.cookies.perplexity import perplexity_cookies
 from rich.console import Console
 
 from core.filesystem_manager import FileSystemManager

@@ -10,3 +10,4 @@ venv/
 .vscode/
 
 perplexity_cookies.py
+perplexity.py
