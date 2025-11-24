@@ -8,6 +8,7 @@ from core.ui_components import print_header, print_footer
 from handlers.fs_commands import handle_fs_command
 from handlers.context_commands import handle_context_command
 from handlers.ai_query import handle_ai_query
+from handlers.system_commands import execute_system_command
 
 console = Console()
 
@@ -30,6 +31,16 @@ async def main():
             
             if not user_input:
                 continue
+
+            # Check if AI query (starts with .)
+            if user_input.startswith('.'):
+                # Remove . prefix and send to AI
+                query = user_input[1:].strip()
+                if query:
+                    await handle_ai_query(query, fs_manager, perplexity_cli)
+                else:
+                    console.print("[yellow]Empty AI query[/yellow]")
+                continue
             
             cmd_parts = user_input.split()
             cmd = cmd_parts[0]
@@ -47,8 +58,7 @@ async def main():
                 await handle_context_command(cmd, args, fs_manager)
             
             else:
-                # AI query
-                await handle_ai_query(user_input, fs_manager, perplexity_cli)
+                execute_system_command(user_input)
                 
     except Exception as e:
         console.print(f"[red]❌ Failed: {e}[/red]")
