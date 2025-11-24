@@ -1,3 +1,20 @@
+# Perplexity AI Terminal
+
+Interactive terminal interface for Perplexity AI with filesystem navigation and context-aware file handling. Navigate your filesystem, add files to context, and query AI with full codebase awareness.
+
+## ✨ Features
+
+- 🗂️ **Filesystem Navigation** - Unix-like commands: `ls`, `cd`, `pwd`, `cat`, `tree`
+- 📋 **Context Management** - Add files to AI context with `@add`, `@remove`, `@list`, `@clear`
+- 🤖 **AI Query with Context** - Ask questions about your code with full file context
+- 🔒 **Safe Boundaries** - Access limited to home directory for security
+- 🎨 **Rich UI** - Beautiful terminal interface with syntax highlighting
+- ⚡ **Glob Pattern Support** - Add multiple files with wildcards (`*.py`, `src/**/*.js`)
+
+## 🚀 Quick Start
+
+### Installation
+
 ~ > cd projects/myapp
 ✓ ~/projects/myapp
 
