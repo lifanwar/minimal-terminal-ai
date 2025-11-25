@@ -173,7 +173,7 @@ class FileSystemManager:
                 matches = list(target.glob('*'))
             else:
                 matches = [target] if target.exists() else []
-        
+
         added = 0
         for match in matches:
             if match.is_file() and self.is_path_allowed(match):
@@ -184,15 +184,18 @@ class FileSystemManager:
                 if self._is_binary(match):
                     console.print(f"[yellow]⚠️  Skipped (binary): {match.name}[/yellow]")
                     continue
-                    
-                self.context_files[match.name] = match
+                
+                # ✅ Simpan dengan absolute path sebagai key
+                abs_path = str(match.resolve())
+                self.context_files[abs_path] = match
                 added += 1
-        
+
         if added:
             console.print(f"[green]✓ Added {added} file(s) to context[/green]")
             self._show_context_summary()
         else:
             console.print("[yellow]⚠️  No files added[/yellow]")
+
     
     def remove_from_context(self, pattern):
         """Remove file(s) from context"""
@@ -309,34 +312,25 @@ class FileSystemManager:
         # Show files
         if has_files:
             console.print("\n[bold]Files:[/bold]")
-            folders = {}
-            for name, path in self.context_files.items():
+            for abs_path, path_obj in self.context_files.items():
+                size = self._format_size(path_obj.stat().st_size)
+                # Show relative to home for readability
                 try:
-                    rel = path.relative_to(self.current_dir)
-                    parent = str(rel.parent) if rel.parent != Path('.') else '.'
-                    if parent not in folders:
-                        folders[parent] = []
-                    folders[parent].append((name, path))
-                except:
-                    if '.' not in folders:
-                        folders['.'] = []
-                    folders['.'].append((name, path))
+                    rel_home = path_obj.relative_to(self.home_dir)
+                    display_path = f"~/{rel_home}"
+                except ValueError:
+                    display_path = abs_path
+                
+                console.print(f"  [white]• {display_path}[/white] [dim]({size})[/dim]")
             
-            for folder in sorted(folders.keys()):
-                if folder != '.':
-                    console.print(f"  [dim]{folder}/[/dim]")
-                for name, path in folders[folder]:
-                    size = self._format_size(path.stat().st_size)
-                    console.print(f"  [white]• {name}[/white] [dim]({size})[/dim]")
-        
-        # Show pastes
-        if has_pastes:
-            console.print("\n[bold]Pasted Content:[/bold]")
-            for paste_id, data in sorted(self.paste_contexts.items()):
-                size = self._format_size(data['size'])
-                lines = data['lines']
-                time_ago = self._format_time_ago(data['timestamp'])
-                console.print(f"  [yellow]• {paste_id}[/yellow] [dim]({lines} lines, {size}) - {time_ago}[/dim]")
+            # Show pastes
+            if has_pastes:
+                console.print("\n[bold]Pasted Content:[/bold]")
+                for paste_id, data in sorted(self.paste_contexts.items()):
+                    size = self._format_size(data['size'])
+                    lines = data['lines']
+                    time_ago = self._format_time_ago(data['timestamp'])
+                    console.print(f"  [yellow]• {paste_id}[/yellow] [dim]({lines} lines, {size}) - {time_ago}[/dim]")
     
     
     def get_context_for_api(self):

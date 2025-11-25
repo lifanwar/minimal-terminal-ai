@@ -45,19 +45,23 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
             # ✅ BUILD CONTEXT dari files + pastes
             context_parts = []
             
-            # Add files sebagai embedded context
             if fs_manager.context_files:
-                for display_name, file_path in fs_manager.context_files.items():
+                for abs_path, file_path in fs_manager.context_files.items():
                     try:
                         content = file_path.read_text(encoding='utf-8')
-                        context_parts.append(f"``````")
+                        # Display dengan path yang jelas
+                        display_name = abs_path.replace(str(fs_manager.home_dir), '~')
+                        context_parts.append(f"```{display_name}\n{content}\n```")
                     except Exception as e:
-                        console.print(f"[yellow]⚠️  Failed to read {display_name}: {e}[/yellow]")
+                        console.print(f"[yellow]⚠️  Failed to read {abs_path}: {e}[/yellow]")
+
             
             # Add paste contexts
             if fs_manager.paste_contexts:
                 for paste_id, data in fs_manager.paste_contexts.items():
-                    context_parts.append(f"``````")
+                    content = data['content']
+                    lines = data['lines']
+                    context_parts.append(f"`{paste_id} ({lines} lines)\n{content}\n```")
             
             # Build final query dengan context
             if context_parts:
