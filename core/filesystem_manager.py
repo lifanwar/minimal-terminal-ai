@@ -334,18 +334,21 @@ class FileSystemManager:
     
     
     def get_context_for_api(self):
-        """Build dict untuk dikirim ke Perplexity API"""
         files_dict = {}
-        
-        for display_name, file_path in self.context_files.items():
+        for abs_path, file_path in self.context_files.items():
             try:
                 content = file_path.read_text(encoding='utf-8')
-                rel_path = file_path.relative_to(self.current_dir)
-                files_dict[str(rel_path)] = content
+                # Stabil: relatif ke home_dir, fallback ke absolute
+                try:
+                    rel_home = file_path.relative_to(self.home_dir)
+                    key = f"~/{rel_home}"
+                except ValueError:
+                    key = str(file_path)  # absolute fallback
+                files_dict[key] = content
             except Exception as e:
-                console.print(f"[yellow]⚠️  Failed to read {display_name}: {e}[/yellow]")
-        
+                console.print(f"[yellow]⚠️ Failed to read {abs_path}: {e}[/yellow]")
         return files_dict
+
     
     def get_relative_path(self):
         """Get current path relative to home"""
