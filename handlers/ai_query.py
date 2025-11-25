@@ -61,7 +61,7 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
                 for paste_id, data in fs_manager.paste_contexts.items():
                     content = data['content']
                     lines = data['lines']
-                    context_parts.append(f"`{paste_id} ({lines} lines)\n{content}\n```")
+                    context_parts.append(f"```{paste_id} ({lines} lines)\n{content}\n```")
             
             # Build final query dengan context
             if context_parts:
@@ -74,7 +74,7 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
             # Build API call parameters (NO files parameter)
             api_params = {
                 'mode': 'pro',
-                'model': 'gpt-5.1',
+                'model': 'claude-4.5-sonnet',
                 'sources': ['web'],
                 'stream': False,
                 'incognito': True
