@@ -12,6 +12,8 @@ class FileSystemManager:
         self.current_dir = Path.cwd()
         self.prev_dir = self.current_dir
         self.context_files = {}  # {display_name: Path_object}
+        self.paste_contexts = {}  # NEW: {paste_id: {"content": str, "timestamp": datetime, "lines": int, "size": int}}
+        self.paste_counter = 0  # NEW: Counter for paste IDs
         self.ignore_patterns = [
             '*.pyc', '__pycache__', '.git', 
             'node_modules', '.env', '*.so', '*.pyc'
@@ -208,36 +210,134 @@ class FileSystemManager:
                 removed += 1
         
         console.print(f"[green]✓ Removed {removed} file(s) from context[/green]")
+
+    def add_paste_to_context(self, text):
+        """
+        Add pasted text to context with auto-generated ID
+
+        Args:
+            text (str): Pasted text content
+
+        Returns:
+            str: Generated paste ID (e.g., "paste_001")
+        """
+        from datetime import datetime
+
+        self.paste_counter += 1
+        paste_id = f"paste_{self.paste_counter:03d}"
+
+        self.paste_contexts[paste_id] = {
+            'content': text,
+            'timestamp': datetime.now(),
+            'lines': text.count('\n') + 1,
+            'size': len(text)
+        }
+
+        return paste_id
+
+
+    def remove_paste_from_context(self, paste_id):
+        """
+        Remove specific paste from context by ID
+
+        Args:
+            paste_id (str): Paste ID to remove
+
+        Returns:
+            bool: True if removed, False if not found
+        """
+        if paste_id in self.paste_contexts:
+            del self.paste_contexts[paste_id]
+            return True
+        return False
+
+
+    def clear_paste_contexts(self):
+        """
+        Clear all paste contexts
+
+        Returns:
+            int: Number of pastes cleared
+        """
+        count = len(self.paste_contexts)
+        self.paste_contexts.clear()
+        return count
+
+
+    def _format_time_ago(self, timestamp):
+        """
+        Format timestamp to relative time string
+
+        Args:
+            timestamp (datetime): Timestamp to format
+
+        Returns:
+            str: Relative time (e.g., "2m ago", "1h ago")
+        """
+        from datetime import datetime
+
+        now = datetime.now()
+        diff = now - timestamp
+        seconds = diff.total_seconds()
+
+        if seconds < 60:
+            return f"{int(seconds)}s ago"
+        elif seconds < 3600:
+            return f"{int(seconds / 60)}m ago"
+        elif seconds < 86400:
+            return f"{int(seconds / 3600)}h ago"
+        else:
+            return f"{int(seconds / 86400)}d ago"
+
     
     def list_context(self):
-        """Show current context files"""
-        if not self.context_files:
-            console.print("[dim]No files in context[/dim]")
+        """Show current context files and pastes"""
+        has_files = len(self.context_files) > 0
+        has_pastes = len(self.paste_contexts) > 0
+        
+        if not has_files and not has_pastes:
+            console.print("[dim]No files or pastes in context[/dim]")
             return
         
+        # Calculate total size
         total_size = sum(f.stat().st_size for f in self.context_files.values())
-        console.print(f"[bold cyan]📋 Context ({len(self.context_files)} files, {self._format_size(total_size)})[/bold cyan]")
+        total_size += sum(p['size'] for p in self.paste_contexts.values())
         
-        # Group by folder
-        folders = {}
-        for name, path in self.context_files.items():
-            try:
-                rel = path.relative_to(self.current_dir)
-                parent = str(rel.parent) if rel.parent != Path('.') else '.'
-                if parent not in folders:
-                    folders[parent] = []
-                folders[parent].append((name, path))
-            except:
-                if '.' not in folders:
-                    folders['.'] = []
-                folders['.'].append((name, path))
+        total_items = len(self.context_files) + len(self.paste_contexts)
+        console.print(f"[bold cyan]📋 Context ({total_items} items, {self._format_size(total_size)})[/bold cyan]")
         
-        for folder in sorted(folders.keys()):
-            if folder != '.':
-                console.print(f"\n[dim]{folder}/[/dim]")
-            for name, path in folders[folder]:
-                size = self._format_size(path.stat().st_size)
-                console.print(f"  [white]• {name}[/white] [dim]({size})[/dim]")
+        # Show files
+        if has_files:
+            console.print("\n[bold]Files:[/bold]")
+            folders = {}
+            for name, path in self.context_files.items():
+                try:
+                    rel = path.relative_to(self.current_dir)
+                    parent = str(rel.parent) if rel.parent != Path('.') else '.'
+                    if parent not in folders:
+                        folders[parent] = []
+                    folders[parent].append((name, path))
+                except:
+                    if '.' not in folders:
+                        folders['.'] = []
+                    folders['.'].append((name, path))
+            
+            for folder in sorted(folders.keys()):
+                if folder != '.':
+                    console.print(f"  [dim]{folder}/[/dim]")
+                for name, path in folders[folder]:
+                    size = self._format_size(path.stat().st_size)
+                    console.print(f"  [white]• {name}[/white] [dim]({size})[/dim]")
+        
+        # Show pastes
+        if has_pastes:
+            console.print("\n[bold]Pasted Content:[/bold]")
+            for paste_id, data in sorted(self.paste_contexts.items()):
+                size = self._format_size(data['size'])
+                lines = data['lines']
+                time_ago = self._format_time_ago(data['timestamp'])
+                console.print(f"  [yellow]• {paste_id}[/yellow] [dim]({lines} lines, {size}) - {time_ago}[/dim]")
+    
     
     def get_context_for_api(self):
         """Build dict untuk dikirim ke Perplexity API"""
