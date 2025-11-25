@@ -12,13 +12,12 @@ from core.response_handler import extract_answer_from_response, show_search_resu
 
 console = Console()
 
-
 async def handle_ai_query(query, fs_manager, perplexity_cli):
     """
     Handle AI query dengan file context dan paste context
     
     Strategy:
-    - Files: Send via 'files' parameter (actual file upload)
+    - Files: Embed sebagai context di query (seperti paste)
     - Pastes: Embed directly into query text
     
     Args:
@@ -43,33 +42,33 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
         ) as progress:
             task = progress.add_task("[cyan]Processing query...", total=None)
             
-            # Prepare files for upload (only actual files, not pastes)
-            files_for_upload = {}
-            for display_name, file_path in fs_manager.context_files.items():
-                try:
-                    content = file_path.read_text(encoding='utf-8')
-                    # Gunakan display_name atau basename file sebagai key
-                    files_for_upload[display_name] = content
-                except Exception as e:
-                    console.print(f"[yellow]⚠️  Failed to read {display_name}: {e}[/yellow]")
+            # ✅ BUILD CONTEXT dari files + pastes
+            context_parts = []
+            
+            # Add files sebagai embedded context
+            if fs_manager.context_files:
+                for display_name, file_path in fs_manager.context_files.items():
+                    try:
+                        content = file_path.read_text(encoding='utf-8')
+                        context_parts.append(f"```{display_name}\n{content}\n```")
+                    except Exception as e:
+                        console.print(f"[yellow]⚠️  Failed to read {display_name}: {e}[/yellow]")
+            
+            # Add paste contexts
+            if fs_manager.paste_contexts:
+                for paste_id, data in fs_manager.paste_contexts.items():
+                    context_parts.append(f"```paste-{paste_id}\n{data['content']}\n```")
 
             
-            # Prepare query with embedded paste contexts
-            final_query = query
-            if paste_count > 0:
-                paste_parts = []
-                for paste_id, data in fs_manager.paste_contexts.items():
-                    paste_parts.append(f"--- Context: {paste_id} ---\n{data['content']}\n")
-                
-                paste_context = "\n".join(paste_parts)
-                final_query = f"{paste_context}\n--- User Question ---\n{query}"
-                
-                console.print(f"[dim]Embedded {paste_count} paste(s) into query[/dim]")
+            # Build final query dengan context
+            if context_parts:
+                context_block = "\n\n".join(context_parts)
+                final_query = f"{context_block}\n\n---\n\n{query}"
+                console.print(f"[dim]Embedded {total_items} item(s) into query[/dim]")
+            else:
+                final_query = query
             
-            if files_for_upload:
-                console.print(f"[dim]Uploading {len(files_for_upload)} file(s): {', '.join(files_for_upload.keys())}[/dim]")
-            
-            # Build API call parameters
+            # Build API call parameters (NO files parameter)
             api_params = {
                 'mode': 'pro',
                 'model': 'gpt-5.1',
@@ -77,10 +76,6 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
                 'stream': False,
                 'incognito': True
             }
-            
-            # Only add files parameter if there are actual files (not pastes)
-            if files_for_upload:
-                api_params['files'] = files_for_upload
             
             # Send query
             resp = await perplexity_cli.search(final_query, **api_params)
