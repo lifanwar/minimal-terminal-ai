@@ -50,15 +50,14 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
                 for display_name, file_path in fs_manager.context_files.items():
                     try:
                         content = file_path.read_text(encoding='utf-8')
-                        context_parts.append(f"```{display_name}\n{content}\n```")
+                        context_parts.append(f"``````")
                     except Exception as e:
                         console.print(f"[yellow]⚠️  Failed to read {display_name}: {e}[/yellow]")
             
             # Add paste contexts
             if fs_manager.paste_contexts:
                 for paste_id, data in fs_manager.paste_contexts.items():
-                    context_parts.append(f"```paste-{paste_id}\n{data['content']}\n```")
-
+                    context_parts.append(f"``````")
             
             # Build final query dengan context
             if context_parts:
