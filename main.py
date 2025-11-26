@@ -6,6 +6,8 @@ from config.cookies.perplexity import perplexity_cookies
 from rich.console import Console
 
 from core.filesystem_manager import FileSystemManager
+
+# Ui
 from ui.components import print_header, print_footer
 
 # utils
