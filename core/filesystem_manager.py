@@ -1,8 +1,9 @@
 from pathlib import Path
 from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.syntax import Syntax    
+from typing import Optional
+
+# Core
+from core.filesystem import FileSystemNavigator
 
 # Utils
 from utils.validators import PathValidator, FileValidator
@@ -12,12 +13,13 @@ console = Console()
 
 class FileSystemManager:
     def __init__(self):
-        self.home_dir = Path.home()
-        self.current_dir = Path.cwd()
-        self.prev_dir = self.current_dir
+        # filesystem operations
+        self.navigator = FileSystemNavigator()
 
+        # validators
         self.path_validator = PathValidator(self.home_dir)
         self.file_validator = FileValidator(self.home_dir)
+
         self.context_files = {}  # {display_name: Path_object}
         self.paste_contexts = {}  # NEW: {paste_id: {"content": str, "timestamp": datetime, "lines": int, "size": int}}
         self.paste_counter = 0  # NEW: Counter for paste IDs
@@ -26,161 +28,47 @@ class FileSystemManager:
             'node_modules', '.env', '*.so', '*.pyc'
         ]
     
-    def cd(self, path=None):
-        """Change directory dengan validasi"""
-        if path is None:
-            target = self.home_dir
-        elif path == '..':
-            target = self.current_dir.parent
-        elif path == '-':
-            target = self.prev_dir
-        else:
-            if Path(path).is_absolute():
-                target = Path(path)
-            else:
-                target = self.current_dir / path
-        
-        target = target.resolve()
-        
-        if not self.path_validator.is_path_allowed(target):
-            console.print("[red]❌ Access denied: outside home directory[/red]")
-            return False
-            
-        if not target.exists():
-            console.print(f"[red]❌ Directory not found: {target}[/red]")
-            return False
-            
-        if not target.is_dir():
-            console.print(f"[red]❌ Not a directory: {target}[/red]")
-            return False
-        
-        self.prev_dir = self.current_dir
-        self.current_dir = target
-        console.print(f"[green]✓[/green] [dim]{self.current_dir}[/dim]")
-        return True
+    @property
+    def home_dir(self):
+        """Get home directory from navigator"""
+        return self.navigator.home_dir
     
-    def ls(self, path=None):
-        """List directory contents"""
-        target = self.current_dir if path is None else self.current_dir / path
-        target = target.resolve()
-        
-        if not self.path_validator.is_path_allowed(target):
-            console.print("[red]❌ Access denied[/red]")
-            return
-            
-        if not target.exists():
-            console.print(f"[red]❌ Path not found: {target}[/red]")
-            return
-        
-        try:
-            items = sorted(target.iterdir(), key=lambda x: (not x.is_dir(), x.name))
-            for item in items:
-                if item.is_dir():
-                    console.print(f"[bold blue]📁 {item.name}/[/bold blue]")
-                else:
-                    size = item.stat().st_size
-                    size_str = self._format_size(size)
-                    console.print(f"[white]📄 {item.name}[/white] [dim]({size_str})[/dim]")
-        except PermissionError:
-            console.print("[red]❌ Permission denied[/red]")
+    @property
+    def current_dir(self):
+        """Get current directory from navigator"""
+        return self.navigator.current_dir
     
-    def cat(self, filepath):
-        """Read file content"""
-        target = self.current_dir / filepath
-        target = target.resolve()
-        
-        if not self.path_validator.is_path_allowed(target):
-            console.print("[red]❌ Access denied[/red]")
-            return None
-            
-        if not target.exists():
-            console.print(f"[red]❌ File not found: {filepath}[/red]")
-            return None
-            
-        if not target.is_file():
-            console.print(f"[red]❌ Not a file: {filepath}[/red]")
-            return None
-        
-        try:
-            content = target.read_text(encoding='utf-8')
-            # Detect jika file code, syntax highlight
-            suffix_to_lexer = {                                                    
-             '.py': 'python',                                                   
-             '.js': 'javascript',                                               
-             '.java': 'java',                                                   
-             '.cpp': 'cpp',                                                     
-             '.c': 'c',                                                         
-             '.h': 'c',                                                         
-             '.css': 'css',                                                     
-             '.html': 'html'                                                    
-         }    
-            
-            if target.suffix in suffix_to_lexer:                                   
-                lexer_name = suffix_to_lexer[target.suffix]                        
-                syntax = Syntax(content, lexer_name, theme="monokai", line_numbers=True)        
-                console.print(syntax)
-            else:
-                console.print(Panel(content, title=str(filepath), border_style="cyan"))
-            return content
-        except UnicodeDecodeError:
-            console.print("[red]❌ Binary file or encoding error[/red]")
-            return None
-        except Exception as e:
-            console.print(f"[red]❌ Error reading file: {e}[/red]")
-            return None
+    def cd(self, path: Optional[str] = None) -> bool:
+        """Change directory - delegates to navigator"""
+        return self.navigator.cd(path)
     
-    def pwd(self):
-        """Print working directory"""
-        console.print(f"[cyan]{self.current_dir}[/cyan]")
-        return str(self.current_dir)
+    def ls(self, path: Optional[str] = None) -> None:
+        """List directory - delegates to navigator"""
+        self.navigator.ls(path)
     
-    def tree(self, path=None, max_depth=3, current_depth=0, prefix=""):
-        """Display directory tree structure"""
-        target = self.current_dir if path is None else self.current_dir / path
-        target = target.resolve()
-        
-        if not self.path_validator.is_path_allowed(target):
-            console.print("[red]❌ Access denied[/red]")
-            return
-            
-        if not target.exists():
-            console.print(f"[red]❌ Path not found[/red]")
-            return
-        
-        if current_depth == 0:
-            console.print(f"[bold cyan]{target.name or target}/[/bold cyan]")
-        
-        if not target.is_dir() or current_depth >= max_depth:
-            return
-        
-        try:
-            items = sorted(target.iterdir(), 
-                          key=lambda x: (not x.is_dir(), x.name.lower()))
-            
-            items = [item for item in items 
-                    if not any(item.match(pattern) for pattern in self.ignore_patterns)]
-            
-            for i, item in enumerate(items):
-                is_last = (i == len(items) - 1)
-                current_prefix = "└── " if is_last else "├── "
-                child_prefix = "    " if is_last else "│   "
-                
-                if item.is_dir():
-                    console.print(f"[dim]{prefix}{current_prefix}[/dim][blue]📁 {item.name}/[/blue]")
-                    self.tree(item, max_depth, current_depth + 1, prefix + child_prefix)
-                else:
-                    size = self._format_size(item.stat().st_size)
-                    console.print(f"[dim]{prefix}{current_prefix}[/dim][white]{item.name}[/white] [dim]({size})[/dim]")
-                    
-        except PermissionError:
-            console.print(f"[dim]{prefix}[/dim][red]❌ Permission denied[/red]")
+    def pwd(self) -> str:
+        """Print working directory - delegates to navigator"""
+        return self.navigator.pwd()
+    
+    def cat(self, filepath: str) -> Optional[str]:
+        """Read file - delegates to navigator"""
+        return self.navigator.cat(filepath)
+    
+    def tree(self, path: Optional[str] = None, max_depth: int = 3) -> None:
+        """Display tree - delegates to navigator"""
+        self.navigator.tree(path, max_depth)
+    
+    def get_relative_path(self) -> str:
+        """Get relative path - delegates to navigator"""
+        return self.navigator.get_relative_path()
+    
     
     def add_to_context(self, pattern):
         """Add file(s) to AI context"""
         if '*' in pattern or '?' in pattern:
-            matches = list(self.current_dir.glob(pattern))
+            matches = list(self.navigator.current_dir.glob(pattern))
         else:
-            target = self.current_dir / pattern
+            target = self.navigator.current_dir / pattern
             if target.is_dir():
                 matches = list(target.glob('*'))
             else:
@@ -328,7 +216,7 @@ class FileSystemManager:
                 size = self._format_size(path_obj.stat().st_size)
                 # Show relative to home for readability
                 try:
-                    rel_home = path_obj.relative_to(self.home_dir)
+                    rel_home = path_obj.relative_to(self.navigator.home_dir)
                     display_path = f"~/{rel_home}"
                 except ValueError:
                     display_path = abs_path
@@ -352,7 +240,7 @@ class FileSystemManager:
                 content = file_path.read_text(encoding='utf-8')
                 # Stabil: relatif ke home_dir, fallback ke absolute
                 try:
-                    rel_home = file_path.relative_to(self.home_dir)
+                    rel_home = file_path.relative_to(self.navigator.home_dir)
                     key = f"~/{rel_home}"
                 except ValueError:
                     key = str(file_path)  # absolute fallback
@@ -360,22 +248,13 @@ class FileSystemManager:
             except Exception as e:
                 console.print(f"[yellow]⚠️ Failed to read {abs_path}: {e}[/yellow]")
         return files_dict
-
-    
-    def get_relative_path(self):
-        """Get current path relative to home"""
-        try:
-            rel = self.current_dir.relative_to(self.home_dir)
-            return f"~/{rel}" if str(rel) != '.' else "~"
-        except ValueError:
-            return str(self.current_dir)
     
     def _show_context_summary(self):
         """Show quick summary of context structure"""
         folders = set()
         for name, path in self.context_files.items():
             try:
-                rel = path.relative_to(self.current_dir)
+                rel = path.relative_to(self.navigator.current_dir)
                 if rel.parent != Path('.'):
                     folders.add(str(rel.parent))
             except:
