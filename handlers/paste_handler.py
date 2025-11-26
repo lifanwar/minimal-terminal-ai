@@ -5,7 +5,7 @@ Handler for multi-line paste with interactive menu
 import questionary
 from rich.console import Console
 from rich.panel import Panel
-from lib.paste_detector import create_preview
+from utils.paste_detector import create_preview
 
 console = Console()
 

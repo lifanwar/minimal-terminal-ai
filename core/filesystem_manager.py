@@ -4,6 +4,9 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.syntax import Syntax    
 
+# Utils
+from utils.validators import PathValidator, FileValidator
+
 console = Console()
 
 
@@ -12,6 +15,7 @@ class FileSystemManager:
         self.home_dir = Path.home()
         self.current_dir = Path.cwd()
         self.prev_dir = self.current_dir
+        self.path_validator = PathValidator(self.home_dir)
         self.context_files = {}  # {display_name: Path_object}
         self.paste_contexts = {}  # NEW: {paste_id: {"content": str, "timestamp": datetime, "lines": int, "size": int}}
         self.paste_counter = 0  # NEW: Counter for paste IDs
@@ -19,14 +23,6 @@ class FileSystemManager:
             '*.pyc', '__pycache__', '.git', 
             'node_modules', '.env', '*.so', '*.pyc'
         ]
-    
-    def is_path_allowed(self, target_path):
-        """Cek apakah path masih dalam home directory"""
-        try:
-            resolved = Path(target_path).resolve()
-            return resolved.is_relative_to(self.home_dir)
-        except Exception:
-            return False
     
     def cd(self, path=None):
         """Change directory dengan validasi"""
@@ -44,7 +40,7 @@ class FileSystemManager:
         
         target = target.resolve()
         
-        if not self.is_path_allowed(target):
+        if not self.path_validator.is_path_allowed(target):
             console.print("[red]❌ Access denied: outside home directory[/red]")
             return False
             
@@ -66,7 +62,7 @@ class FileSystemManager:
         target = self.current_dir if path is None else self.current_dir / path
         target = target.resolve()
         
-        if not self.is_path_allowed(target):
+        if not self.path_validator.is_path_allowed(target):
             console.print("[red]❌ Access denied[/red]")
             return
             
@@ -91,7 +87,7 @@ class FileSystemManager:
         target = self.current_dir / filepath
         target = target.resolve()
         
-        if not self.is_path_allowed(target):
+        if not self.path_validator.is_path_allowed(target):
             console.print("[red]❌ Access denied[/red]")
             return None
             
@@ -141,7 +137,7 @@ class FileSystemManager:
         target = self.current_dir if path is None else self.current_dir / path
         target = target.resolve()
         
-        if not self.is_path_allowed(target):
+        if not self.path_validator.is_path_allowed(target):
             console.print("[red]❌ Access denied[/red]")
             return
             
@@ -190,7 +186,7 @@ class FileSystemManager:
 
         added = 0
         for match in matches:
-            if match.is_file() and self.is_path_allowed(match):
+            if match.is_file() and self.path_validator.is_path_allowed(match):
                 if match.stat().st_size > 500_000:
                     console.print(f"[yellow]⚠️  Skipped (too large): {match.name}[/yellow]")
                     continue
