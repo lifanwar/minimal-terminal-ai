@@ -2,6 +2,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.syntax import Syntax    
 
 console = Console()
 
@@ -105,8 +106,21 @@ class FileSystemManager:
         try:
             content = target.read_text(encoding='utf-8')
             # Detect jika file code, syntax highlight
-            if target.suffix in ['.py', '.js', '.java', '.cpp', '.c', '.h', '.css', '.html']:
-                console.print(Markdown(f"``````"))
+            suffix_to_lexer = {                                                    
+             '.py': 'python',                                                   
+             '.js': 'javascript',                                               
+             '.java': 'java',                                                   
+             '.cpp': 'cpp',                                                     
+             '.c': 'c',                                                         
+             '.h': 'c',                                                         
+             '.css': 'css',                                                     
+             '.html': 'html'                                                    
+         }    
+            
+            if target.suffix in suffix_to_lexer:                                   
+                lexer_name = suffix_to_lexer[target.suffix]                        
+                syntax = Syntax(content, lexer_name, theme="monokai", line_numbers=True)        
+                console.print(syntax)
             else:
                 console.print(Panel(content, title=str(filepath), border_style="cyan"))
             return content
