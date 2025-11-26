@@ -15,7 +15,9 @@ class FileSystemManager:
         self.home_dir = Path.home()
         self.current_dir = Path.cwd()
         self.prev_dir = self.current_dir
+
         self.path_validator = PathValidator(self.home_dir)
+        self.file_validator = FileValidator(self.home_dir)
         self.context_files = {}  # {display_name: Path_object}
         self.paste_contexts = {}  # NEW: {paste_id: {"content": str, "timestamp": datetime, "lines": int, "size": int}}
         self.paste_counter = 0  # NEW: Counter for paste IDs
@@ -191,7 +193,7 @@ class FileSystemManager:
                     console.print(f"[yellow]⚠️  Skipped (too large): {match.name}[/yellow]")
                     continue
                 
-                if self._is_binary(match):
+                if self.file_validator._is_binary(match):
                     console.print(f"[yellow]⚠️  Skipped (binary): {match.name}[/yellow]")
                     continue
                 
@@ -381,15 +383,6 @@ class FileSystemManager:
         
         if folders:
             console.print(f"[dim]Folders: {', '.join(sorted(folders))}[/dim]")
-    
-    def _is_binary(self, filepath):
-        """Check if file is binary"""
-        try:
-            with open(filepath, 'rb') as f:
-                chunk = f.read(1024)
-                return b'\x00' in chunk
-        except:
-            return True
     
     @staticmethod
     def _format_size(size):

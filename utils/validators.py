@@ -30,37 +30,27 @@ class PathValidator:
             return resolved.is_relative_to(self.home_dir)
         except Exception:
             return False
-    
-    def validate_path_exists(self, target_path: Path) -> Optional[str]:
-        """Validate path existence"""
-        if not target_path.exists():
-            return f"Path not found: {target_path}"
-        return None
-    
-    def validate_is_directory(self, target_path: Path) -> Optional[str]:
-        """Validate path is a directory"""
-        if not target_path.is_dir():
-            return f"Not a directory: {target_path}"
-        return None
-    
-    def validate_is_file(self, target_path: Path) -> Optional[str]:
-        """Validate path is a file"""
-        if not target_path.is_file():
-            return f"Not a file: {target_path}"
-        return None
 
 
 class FileValidator:
     """Validator for file properties (stateless)"""
+
+    def __init__(self, home_dir: Path):
+        """
+        Initialize validator with home directory
+        
+        Args:
+            home_dir: Home directory boundary for path validation
+        """
+        self.home_dir = home_dir
     
-    @staticmethod
-    def is_binary(filepath: Path, chunk_size: int = 1024) -> bool:
+    def _is_binary(self, filepath):
         """Check if file is binary"""
         try:
             with open(filepath, 'rb') as f:
-                chunk = f.read(chunk_size)
+                chunk = f.read(1024)
                 return b'\x00' in chunk
-        except Exception:
+        except:
             return True
     
     @staticmethod
