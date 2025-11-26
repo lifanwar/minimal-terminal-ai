@@ -11,6 +11,12 @@ Interactive terminal interface for Perplexity AI with filesystem navigation and 
 - 🎨 **Rich UI** - Beautiful terminal interface with syntax highlighting
 - ⚡ **Glob Pattern Support** - Add multiple files with wildcards (`*.py`, `src/**/*.js`)
 
+### Prerequisites                                                              
+                                                                                
+ - Python 3.12 or higher                                                        
+ - Perplexity AI account with valid cookies                                     
+ - Nix package manager (optional, for Nix users)
+
 ## 🚀 Quick Start
 
 ### Installation

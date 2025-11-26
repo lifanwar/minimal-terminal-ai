@@ -6,8 +6,10 @@ from config.cookies.perplexity import perplexity_cookies
 from rich.console import Console
 
 from core.filesystem_manager import FileSystemManager
-from core.ui_components import print_header, print_footer
+from ui.components import print_header, print_footer
 from lib.paste_detector import detect_multiline_paste
+
+# handlers
 from handlers.fs_commands import handle_fs_command
 from handlers.context_commands import handle_context_command
 from handlers.ai_query import handle_ai_query
