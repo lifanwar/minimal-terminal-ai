@@ -74,9 +74,9 @@ async def handle_ai_query(query, fs_manager, perplexity_cli):
             # Build API call parameters (NO files parameter)
             api_params = {
                 'mode': 'pro',
-                'model': 'claude-4.5-sonnet',
+                'model': 'gpt-5.1',
                 'sources': ['web'],
-                'stream': False,
+                'stream': True,
                 'incognito': True
             }
             
