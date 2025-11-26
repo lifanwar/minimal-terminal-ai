@@ -7,7 +7,9 @@ from rich.console import Console
 
 from core.filesystem_manager import FileSystemManager
 from ui.components import print_header, print_footer
-from lib.paste_detector import detect_multiline_paste
+
+# utils
+from utils.paste_detector import detect_multiline_paste
 
 # handlers
 from handlers.fs_commands import handle_fs_command
